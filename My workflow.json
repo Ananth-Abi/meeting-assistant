@@ -1,0 +1,163 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "id": "93345690-6736-4a4b-a349-d2e32b1184c7",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    text: `Meeting: Product Team Sync\nDate: March 16, 2026\nAttendees: Alice, Bob, Sarah\n\nAction Items:\n- Alice will update the homepage design by March 20\n- Bob needs to fix the login bug before end of week\n- Sarah will send the Q1 report to the client by Friday\n- Team agreed to schedule a follow-up meeting next Monday\n- Bob will review the new API documentation by March 18\n- Alice needs to create social media posts for the product launch\n- Sarah will set up the new project tracking board in Trello`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [144, 144],
+      "id": "d457ea66-bd58-4c37-9f2e-a367b919e401",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=YOUR_GEMINI_API_KEY",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Extract all action items from this meeting transcript. Return ONLY a valid JSON array, no extra text. Each item must have: title, description, assignee, due_date.\\n\\nTranscript:\\n={{ $json.text }}\"\n    }]\n  }]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [352, 144],
+      "id": "9088aa6c-b28c-4a87-8fbd-b3c631d8e9fb",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.candidates[0].content.parts[0].text;\nconst cleaned = raw.replace(/```json|```/g, '').trim();\nconst tasks = JSON.parse(cleaned);\nreturn tasks.map(task => ({ json: task }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 144],
+      "id": "30a83ea9-51ec-4f76-bc46-e5fce66793b3",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "listId": "69b83a10da18c724560298af",
+        "name": "={{ $json.title }}",
+        "description": "={{ $json.description }} - Assignee: {{ $json.assignee }} - Due: {{ $json.due_date }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.trello",
+      "typeVersion": 1,
+      "position": [736, 144],
+      "id": "2009a35d-c0b6-45b7-bac1-73d187f4c860",
+      "name": "Create a card",
+      "credentials": {
+        "trelloApi": {
+          "id": "GPLUTMutMevsSvVy",
+          "name": "Trello account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [912, 144],
+      "id": "ecdb871e-6810-4352-b532-fb3e55bc8fab",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_SLACK_WEBHOOK_URL",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"text\": \"New meeting tasks have been added to Trello! Check your Meeting Tasks board for the latest action items.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1040, 240],
+      "id": "2f55b1e4-735f-471c-a577-de3f20e6dea2",
+      "name": "HTTP Request1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [[]]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Create a card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a card": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [[]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "32b33d37-9ea3-4785-b667-c39c21763929",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9834eb0a98472919a1cc4cbe2a5b8b096cb11385e2dab8f8aa72587dbee145b4"
+  },
+  "id": "MfqgL0KoS0oOmyfc",
+  "tags": []
+}
